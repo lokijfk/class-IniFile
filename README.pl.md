@@ -43,7 +43,7 @@ Dictionary<string, string> dane = SettingsGetSection("sekcja");
 ***
 ## Dziennik zmian
 ### [Pierwsza publikacja] - 2023-02-08
-* dodanie klasy w dwuch wersjach
+* dodanie klasy w dwóch wersjach
 
 ---
 [![license](https://shields.io/badge/license-MIT-green.svg)](https://github.com/lokijfk/class-IniFile/blob/main/LICENSE)
