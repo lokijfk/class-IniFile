@@ -42,9 +42,9 @@ var section = GetSection("section");
 * the last stage of adding is writing to a file
 * if the file does not exist it will be createdy  
 ```c#
-Settings.Write("sekcja", "klucz", "dane");
-//lub
-Settings.Write("sekcja",new Dictionary<string, string>{{ key, value },{key_1,value_1},{key_n,value_n});
+Settings.Write("section", "key", "data");
+//or
+Settings.Write("section",new Dictionary<string, string>{{ key, value },{key_1,value_1},{key_n,value_n});
 ```
 * Or replace the entire section with a new dictionary
 ```c#
