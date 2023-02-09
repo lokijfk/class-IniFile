@@ -16,6 +16,9 @@ A class for handling ini files created on the occasion of one of the C# projects
 The ini file is added to the object at the initialization stage  
 ```c#
 IniFiole Settings = new IniFile(@"settings.ini");
+//or
+IniFiole Settings = new IniFile();
+Settings.LoadIni("path");
 ```
 - if the file exists and contains data, it will be downloaded to the data storage structure in the object
 - if the file does not exist, it will be created when saving, i.e. when data is added to the structure for the first time
@@ -25,6 +28,13 @@ IniFiole Settings = new IniFile(@"settings.ini");
 ```c#
 string dane = Settings.Read("section", "key");
 ``` 
+* Read the entire section
+```c#
+Dictionary<string, string> sekcja;
+sekcja = GetSection("section");
+//or
+var section = GetSection("section");
+```
 ### Data recording:
 * adds data to the key in the selected section
 * if one of them does not exist, it will be created
@@ -32,17 +42,45 @@ string dane = Settings.Read("section", "key");
 * the last stage of adding is writing to a file
 * if the file does not exist it will be createdy  
 ```c#
-Settings.Write("section", "key", "data");
+Settings.Write("sekcja", "klucz", "dane");
+//lub
+Settings.Write("sekcja",new Dictionary<string, string>{{ key, value },{key_1,value_1},{key_n,value_n});
 ```
-### Reading all data from the selected section:
-* data is returned as "Dictionary" class  
+* Or replace the entire section with a new dictionary
 ```c#
-Dictionary<string, string> data = SettingsGetSection("section");
+Settings.WriteAppendAll("section",new  Dictionary<string, string>{{ key, value },{key_1,value_1},{key_n,value_n});
+``` 
+### Deleting keys and sections:
+* deleting individual keys:
+```c#
+ Settings.DeleteKey("section","key");
 ```
+* deleting entire sections:
+```c#
+ Settings.DeleteSection("section");
+```
+### helper methods - tools:
+* transaction - allows you to add data without saving to the file, should be used when saving in a loop:
+```c#
+ Settings.OpenTransaction();
+ for(.......){
+    Settings.DeleteKey("section","key");
+ }
+ Savetransaction();//only here will write to the file
+```
+* keys and sections
+```c#
+string[] section =  GetSectionList();
+string[] keys = GetKeysList("Section");
+```
+
 ***
 ## Change Log
 ### [First publication] - 2023-02-08
 * adding a class in two versions
 
+### [Adding Functionality] - 2023-02-09
+* addition of helper methods
+* addition of extended saving methods and alternative file loading
 ---
 [![license](https://shields.io/badge/license-MIT-green.svg)](https://github.com/lokijfk/class-IniFile/blob/main/LICENSE)

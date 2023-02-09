@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace ConfiguratorSH
 {
@@ -11,33 +12,33 @@ namespace ConfiguratorSH
         /// nie obsługuje komentarzy i pustych linii - są usuwane
         /// przewidziane są pliki które zawierają sekcje
         /// pliki bez sekcji są nie obsługiwane
-        /// -------------------------------------
-        /// pomysły
-        /// -------------------------------------
-        /// korci mnie żeby tu dodać obsługęnawiasów kwadratowych i wyszukiwanie jak w dictionary
-        /// https://learn.microsoft.com/pl-pl/dotnet/api/system.collections.generic.idictionary-2?view=net-6.0
-        /// musiał bym poczytać co mam zaiplementować, ale musiał bym tak zrobić żeby byłą przewidziana tablica dwuwymarowa od ręki i nie większa
-        /// -------------------------------------
-        /// mam pomysl na komentarze, nagłówek nazywał by się KomLine + numer, tak samo ma się nzaywać podklucz
-        /// a wartość to już wiadomo będzie komentarzem
-        /// jak to zrobię odpowiednio to komentarze będą odczytywane i zapisywane do pliku
         /// 
-        /// przygotowane dla .NET 4.8 i C# v 7.3
-        /// https://learn.microsoft.com/pl-pl/dotnet/csharp/language-reference/compiler-options/language
+        /// przygotowane dla .NET Framework 4.8 i C# v 7.3
         /// 
-        /// brak testów, porobić na różne buble
         /// </summary>
 
-
-        private readonly string iniPath;
-
+        #region ptivate
+        private string iniPath;
+        private bool transaction = false;
         // ta konstrukcja w przybliżeniu odzwierciedla wygląd pliku ini
         private readonly Dictionary<string, Dictionary<string, string>> ListAdw = new Dictionary<string, Dictionary<string, string>>();
 
-        public IniFile(string path)
+        private void ClearAll()
         {
-            iniPath = path;
-            LoadIni();
+            foreach (KeyValuePair<string, Dictionary<string, string>> item in ListAdw)
+            {
+                ListAdw[item.Key].Clear();
+            }
+            ListAdw.Clear();
+
+            foreach (KeyValuePair<string, Dictionary<string, string>> item in ListAdw)
+            {
+                foreach (KeyValuePair<string, string> kvp in ListAdw[item.Key])
+                {
+                    ListAdw[item.Key].Remove(kvp.Key);
+                }
+                ListAdw.Remove(item.Key);
+            }
         }
 
         /// <summary>
@@ -69,11 +70,13 @@ namespace ConfiguratorSH
         /// <param name="iniPath"></param>
         private void SaveIni()
         {
-            //tu zabezpieczenie żeby całkowicie nie usunąć danych ale czy potrzebne ??
-            string[] tab = IniToArray();
-            //if(tab.Length > 0)
-            File.WriteAllLines(this.iniPath, tab);
-
+            if (!this.transaction)
+            {
+                //tu zabezpieczenie żeby całkowicie nie usunąć danych ale czy potrzebne ??
+                string[] tab = IniToArray();
+                //if(tab.Length > 0)
+                File.WriteAllLines(this.iniPath, tab);
+            }
         }
 
         /// <summary>
@@ -83,25 +86,34 @@ namespace ConfiguratorSH
         private void LoadIni()
         {
             string header = "", key, value, temp;
-            int found;
+            int found;//, foundS1;//, foundS2;
+            //jak obsługiwać dane bez  sekcji - dać nagłówek sekcji MASTER-HEAD-INI-FILE-licznik  ?? jako sekcją główną ??
+            //licznik dla każdego rodzaju jest osobny tak żeby się nie mieszały, a może zrobić jeden ogólenie dla wartości nie obsługiwanych
+            //jak obługiwać puste linie - dawać key EMPTY-LINE-KEY-INI-FILE-licznik lubSEPARATO-....-licznik
+            //jak obsługiwać komentarze -
+            //dla nagłówka zakomentowanego lub bez sekcji COMMENT-HEADER-INI-FILE-licznik w header tak samo w key i value ze średnikiemna początku
+            //dla klucza zakomentowanego COMMENT-KEY-INI-FILE-licznik dodać # na początku i dalej key=value
+            //dla wartości zakomentowanej średnik na początku ??
             if (File.Exists(this.iniPath))
             {
                 foreach (string line in File.ReadLines(this.iniPath))
                 {
                     temp = line.Trim();                    
                     if (temp.StartsWith(";")|| temp.StartsWith("#")||(temp.Length == 0)) continue;
-                    if (temp.StartsWith(";"))
+                    if (temp.StartsWith("["))
                     {
-                        found = temp.IndexOf("[");                        
+                        found = temp.IndexOf("[");
+                        //found1 = temp.Substring(found + 1);//co tu było ?? bo na pewno nie substring
                         header = temp.Substring(found + 1).Remove(temp.IndexOf("]", found) - 1);                       
                         ListAdw[header] = new Dictionary<string, string>();
                     }
                     else
-                    {                           
+                    {   
+                        
                         found = temp.IndexOf("=");
                         if (found > 0)
                         {
-                            key = temp.Remove(found); 
+                            key = temp.Remove(found);
                             value = temp.Substring(found + 1);//temp.Substring(found + 1);                        
                             if (!header.Equals(""))
                                 ListAdw[header][key] = value;
@@ -110,6 +122,35 @@ namespace ConfiguratorSH
                 }
             }
         }
+        #endregion
+
+        public bool Transaction { get { return transaction; } }
+        public string IniPath { get { return iniPath; } }
+
+        //---- initialize, open the file and load the ini if it exists
+
+        public IniFile(string path = "")
+        {
+            iniPath = path;
+            if ((this.iniPath != "") && (this.iniPath != String.Empty))
+            {
+                LoadIni();
+            }
+        }
+
+        public void LoadIni(String path)
+        {
+            if ((this.iniPath != "") && (this.iniPath != String.Empty))
+            {
+                ClearAll();
+            }
+                this.iniPath = path;                
+                //ListAdw.Clear();
+                LoadIni();            
+        }
+
+
+        //---- reading data from ini keys
 
         /// <summary>
         /// zwraca zawartość klucza z podane sekcji
@@ -126,6 +167,22 @@ namespace ConfiguratorSH
             }
             return "";
         }
+
+        /// <summary>
+        /// zwraca zawartość całej cekcji w postaci obiektu Dictionary<string,string>
+        /// </summary>
+        /// <param name="section"></param>
+        /// <returns></returns>
+        public Dictionary<string, string> GetSection(string section)
+        {
+            if (ListAdw.ContainsKey(section))
+            {
+                return ListAdw[section];
+            }
+            return null;
+        }
+
+        //--- write data
 
         /// <summary>
         /// zapis danych do struktury (i do pliku)
@@ -158,6 +215,45 @@ namespace ConfiguratorSH
         }
 
         /// <summary>
+        /// zapis danych do struktury, nadpisuje istniejące dane
+        /// </summary>
+        /// <param name="section"></param>
+        /// <param name="KeyVal"></param>
+        public void WriteAppendAll(string section, Dictionary<string, string> KeyVal)
+        {
+
+            if (ListAdw.ContainsKey(section))
+            {
+                ListAdw[section].Clear();
+            }
+            ListAdw[section] = KeyVal;
+            //to do poprawy a na pewno do zmiany
+            SaveIni();
+        }
+
+        /// <summary>
+        /// zapis danych do struktury, dopisuje do istniejącej struktury
+        /// </summary>
+        /// <param name="section"></param>
+        /// <param name="KeyVal"></param>
+        public void Write(string section, Dictionary<string, string> KeyVal)
+        {
+            if (!ListAdw.ContainsKey(section))
+            {
+                ListAdw[section] = new Dictionary<string, string>();
+            }
+            foreach (KeyValuePair<string, string> kvp in KeyVal)
+            {
+                //lista.Add(kvp.Key + "=" + kvp.Value);
+                ListAdw[section][kvp.Key] = kvp.Value;
+            }
+            //to do poprawy a na pewno do zmiany
+            SaveIni();
+        }
+
+        //---- delete keys and section
+
+        /// <summary>
         /// usuwa całą wskazaną sekcję
         /// </summary>
         /// <param name="section"></param>
@@ -172,20 +268,6 @@ namespace ConfiguratorSH
         }
 
         /// <summary>
-        /// zwraca zawartość całej cekcji w postaci obiektu Dictionary<string,string>
-        /// </summary>
-        /// <param name="section"></param>
-        /// <returns></returns>
-        public Dictionary<string, string> GetSection(string section)
-        {
-            if (ListAdw.ContainsKey(section))
-            {
-                return ListAdw[section];
-            }
-            return null;
-        }
-
-        /// <summary>
         /// usuwa klucz 'key' z wartością z sekcji 'section"
         /// </summary>
         /// <param name="section"></param>
@@ -195,6 +277,52 @@ namespace ConfiguratorSH
             if (ListAdw.ContainsKey(section) && ListAdw[section].ContainsKey(key))
             {
                 ListAdw[section].Remove(key);
+                SaveIni();
+            }
+        }
+
+        //---- tools
+
+        /// <summary>
+        /// Zwraca listę kluczy sekcji
+        /// </summary>
+        /// <returns></returns>
+        public string[] GetSectionList()
+        {
+            return ListAdw.Keys.ToArray();
+            // return Array.Empty<string>();
+        }
+
+        /// <summary>
+        /// Zwraca listę kluczy w wybranej sekcji
+        /// </summary>
+        /// <param name="Section"></param>
+        /// <returns></returns>
+        public string[] GetKeysList(string Section)
+        {
+            return ListAdw[Section].Keys.ToArray();
+        }
+
+        /// <summary>
+        /// otwiera tranzakcję, czyli cykliczny zapis do struktury
+        /// powoduje nie zapisywanie do pliku
+        /// </summary>
+        public void OpenTransaction()
+        {
+            if (!transaction)
+            {
+                transaction = true;
+            }
+        }
+
+        /// <summary>
+        /// zamyka tranzakcję i zapisuje dane ze struktury do pliku
+        /// </summary>
+        public void Savetransaction()
+        {
+            if (transaction)
+            {
+                transaction = false;
                 SaveIni();
             }
         }
