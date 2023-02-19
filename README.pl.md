@@ -11,6 +11,7 @@ Klasa do obsługi plików ini utworzona przy okazji jednego z projektów w C#.
 * nie obsługuje plików bez sekcji
 * nie obsługuje komentarzy, nie uwzględnia ich jako danych i usuwa przy zapisie
 * nie obsługuje pustych linii, nie uwzględnia ich jako danych i usuwa przy zapisie
+* ważna jest wielkość liter w kluczach
 
 ## Sposoby użycia
 ### Inicjalizacja i dodawanie pliku

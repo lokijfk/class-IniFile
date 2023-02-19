@@ -10,6 +10,7 @@ A class for handling ini files created on the occasion of one of the C# projects
 * does not support files without sections
 * does not support comments, does not include them as data, and removes them on save
 * does not handle blank lines, does not consider them as data and removes them on write
+* keys are case-sensitive
 
 ## Usage
 ### Initialization
@@ -30,8 +31,8 @@ string dane = Settings.Read("section", "key");
 ``` 
 * Read the entire section
 ```c#
-Dictionary<string, string> sekcja;
-sekcja = GetSection("section");
+Dictionary<string, string> section;
+section = GetSection("section");
 //or
 var section = GetSection("section");
 ```
